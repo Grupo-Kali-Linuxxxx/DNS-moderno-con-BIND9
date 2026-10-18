@@ -1,0 +1,63 @@
+# Red de la U.E. Horizonte (clases 7 a 13): dos servidores de nombres, un resolutor, un cliente del colegio,
+# un cliente "de internet" (externo, clase 9) y dos servidores de correo (mail y mail2, clases 12-13).
+#   docker compose up -d --build
+#   docker compose exec ns1 bash        (tus carpetas lab07, lab08… están en /lab)
+#   docker compose stop / start         (conserva lo configurado)
+x-nodo: &nodo
+  build: .
+  image: horizonte-dns:24.04
+  privileged: true
+  cgroup: host
+  tmpfs: [/run, /run/lock, /tmp]
+  volumes: ["../:/lab"]    # tus carpetas lab07, lab08, lab09… aparecen en /lab
+  dns: [10.10.10.4]          # en la clase 8, el resolutor del colegio
+
+services:
+  ns1:
+    <<: *nodo
+    container_name: ns1
+    hostname: ns1
+    networks:
+      horizonte: {ipv4_address: 10.10.10.2}
+      internet:  {ipv4_address: 172.30.0.2}     # su "cara pública" (clase 9)
+  ns2:
+    <<: *nodo
+    container_name: ns2
+    hostname: ns2
+    networks: {horizonte: {ipv4_address: 10.10.10.3}}
+  resolutor:
+    <<: *nodo
+    container_name: resolutor
+    hostname: resolutor
+    dns: [1.1.1.1]
+    networks: {horizonte: {ipv4_address: 10.10.10.4}}
+  cliente:
+    <<: *nodo
+    container_name: cliente
+    hostname: cliente
+    networks: {horizonte: {ipv4_address: 10.10.10.50}}
+
+  mail:                       # servidor de correo del colegio (clases 12-13)
+    <<: *nodo
+    container_name: mail
+    hostname: mail.horizonte.internal
+    networks: {horizonte: {ipv4_address: 10.10.10.25}}
+  mail2:                      # servidor de correo de OTRO dominio (familia.internal) para probar envíos entre dominios
+    <<: *nodo
+    container_name: mail2
+    hostname: mail.familia.internal
+    networks: {horizonte: {ipv4_address: 10.10.10.26}}
+  externo:
+    <<: *nodo
+    container_name: externo
+    hostname: externo
+    dns: [1.1.1.1]
+    networks: {internet: {ipv4_address: 172.30.0.100}}
+
+networks:
+  horizonte:
+    ipam:
+      config: [{subnet: 10.10.10.0/24}]
+  internet:                   # simula internet: aquí solo viven ns1 (cara pública) y el cliente externo
+    ipam:
+      config: [{subnet: 172.30.0.0/24}]

@@ -1,0 +1,16 @@
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Archivos temporales y backups
+*.tmp
+*~
+*.bak
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Docker
+.docker/

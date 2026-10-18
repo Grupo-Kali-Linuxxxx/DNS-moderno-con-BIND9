@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Actividad 2: DNS Moderno con BIND9 — Defensa Grupal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: rgba(18, 24, 38, 0.85);
+      --border: rgba(255, 255, 255, 0.08);
+      --primary: #38bdf8;
+      --primary-glow: rgba(56, 189, 248, 0.35);
+      --accent: #818cf8;
+      --success: #34d399;
+      --warning: #fbbf24;
+      --danger: #f87171;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --code-bg: #050811;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: radial-gradient(circle at 50% 20%, #151c2e 0%, var(--bg) 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* Barra superior */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(11, 15, 25, 0.6);
+      backdrop-filter: blur(12px);
+      z-index: 10;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--primary);
+    }
+
+    .badge {
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid var(--primary-glow);
+      color: var(--primary);
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .slide-counter {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    /* Contenedor de Diapositivas */
+    main {
+      flex: 1;
+      position: relative;
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .slide {
+      position: absolute;
+      width: 100%;
+      max-width: 1100px;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(20px) scale(0.98);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 1.5rem;
+      padding: 2.5rem 3rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px var(--primary-glow);
+      backdrop-filter: blur(16px);
+      overflow-y: auto;
+      max-height: 82vh;
+    }
+
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0) scale(1);
+      z-index: 5;
+    }
+
+    /* Tipografía de diapositivas */
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, #ffffff 30%, var(--primary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    h2 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 1.25rem;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    h3 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #e2e8f0;
+      margin: 1rem 0 0.5rem 0;
+    }
+
+    p {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      line-height: 1.6;
+      margin-bottom: 1rem;
+    }
+
+    /* Grillas y Cajas */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin: 1.5rem 0;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+      margin: 1.5rem 0;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1.25rem;
+      transition: border-color 0.2s;
+    }
+
+    .card:hover {
+      border-color: var(--primary);
+    }
+
+    .card h4 {
+      color: var(--text);
+      font-size: 1.05rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    /* Tablas */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: rgba(56, 189, 248, 0.1);
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    /* Bloques de Código */
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: #38bdf8;
+      overflow-x: auto;
+      margin: 0.75rem 0;
+      line-height: 1.5;
+    }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--primary);
+      background: rgba(56, 189, 248, 0.1);
+      padding: 0.15rem 0.4rem;
+      border-radius: 0.25rem;
+      font-size: 0.9em;
+    }
+
+    /* Listas con estilo */
+    ul {
+      list-style: none;
+      margin: 0.75rem 0;
+    }
+
+    ul li {
+      position: relative;
+      padding-left: 1.5rem;
+      margin-bottom: 0.6rem;
+      color: #cbd5e1;
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+
+    ul li::before {
+      content: "▹";
+      position: absolute;
+      left: 0;
+      color: var(--primary);
+      font-weight: bold;
+    }
+
+    .highlight {
+      color: var(--success);
+      font-weight: 600;
+    }
+
+    /* Barra inferior y controles */
+    footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      border-top: 1px solid var(--border);
+      background: rgba(11, 15, 25, 0.6);
+      backdrop-filter: blur(12px);
+      z-index: 10;
+    }
+
+    .progress-bar-container {
+      flex: 1;
+      max-width: 400px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+      overflow: hidden;
+      margin: 0 1.5rem;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .btn-nav {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.5rem 1.25rem;
+      border-radius: 0.5rem;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s;
+    }
+
+    .btn-nav:hover {
+      background: var(--primary);
+      color: #0b0f19;
+      border-color: var(--primary);
+    }
+
+    .btn-fullscreen {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 0.5rem;
+      border-radius: 0.4rem;
+    }
+
+    .btn-fullscreen:hover {
+      color: var(--text);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Encabezado -->
+  <header>
+    <div class="brand">
+      <span>🌐 U.E. Horizonte</span>
+      <span class="badge">Actividad 2</span>
+      <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: normal;">Tecnología Web I</span>
+    </div>
+    <div class="slide-counter" id="counter">1 / 12</div>
+  </header>
+
+  <!-- Contenedor Principal de Diapositivas -->
+  <main>
+
+    <!-- Slide 1: Portada -->
+    <div class="slide active">
+      <div style="text-align: center; padding: 2rem 0;">
+        <span class="badge" style="margin-bottom: 1rem; display: inline-block;">Defensa Grupal de DNS</span>
+        <h1 style="font-size: 3rem;">DNS Moderno con BIND9</h1>
+        <p style="font-size: 1.3rem; color: var(--primary); font-weight: 600; margin-bottom: 2rem;">
+          Implementación Autoritativa, Replicación con TSIG, DoT Cifrado y Análisis Comparativo
+        </p>
+        <div class="grid-2" style="max-width: 800px; margin: 0 auto; text-align: left;">
+          <div class="card">
+            <h4 style="color: var(--primary);">👥 Equipo de Trabajo</h4>
+            <p style="margin: 0; color: #e2e8f0;">• Charles Yourdan Conde Ugarteche</p>
+            <p style="margin: 0; color: #e2e8f0;">• Brian Alejandro Calás Despaigne</p>
+            <p style="margin: 0; color: #e2e8f0;">• Ketfer Gianella Salazar</p>
+            <p style="margin: 0; color: #e2e8f0;">• Marco Aurelio Barriga</p>
+            <p style="margin: 0; color: #e2e8f0;">• Adaniel Balderrama Orellana</p>
+          </div>
+          <div class="card">
+            <h4 style="color: var(--primary);">🎓 Datos Institucionales</h4>
+            <p style="margin: 0;"><strong>Docente:</strong> M.Sc. Ing. Jimmy Nataniel Requena Llorentty</p>
+            <p style="margin: 0;"><strong>Asignatura:</strong> Tecnología Web I (SIS-0150)</p>
+            <p style="margin: 0;"><strong>Institución:</strong> Universidad Privada Domingo Savio</p>
+            <p style="margin: 0;"><strong>Fecha:</strong> Octubre 2026</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 2: El Problema de Partida -->
+    <div class="slide">
+      <h2>⚠️ Contexto del Problema: De 'hosts' a un DNS Corporativo</h2>
+      <p>La red escolar de la Unidad Educativa Horizonte creció a más de 40 terminales, impresoras y servicios web/correo.</p>
+      <div class="grid-2">
+        <div class="card" style="border-left: 4px solid var(--danger);">
+          <h4 style="color: var(--danger);">❌ El Pasado: Archivo 'hosts'</h4>
+          <ul>
+            <li>Cada máquina mantenía su propia lista estática manual.</li>
+            <li>Inmanejable con más de 10 dispositivos.</li>
+            <li>Cualquier cambio de IP requería modificar 40 computadoras una a una.</li>
+            <li>Peligro constante de suplantación y desincronización.</li>
+          </ul>
+        </div>
+        <div class="card" style="border-left: 4px solid var(--success);">
+          <h4 style="color: var(--success);">✅ La Solución: BIND 9.18 + Unbound</h4>
+          <ul>
+            <li><strong>Autonomía y Alta Disponibilidad:</strong> Servidor primario (ns1) y secundario (ns2).</li>
+            <li><strong>Seguridad Criptográfica:</strong> Transferencias restringidas mediante claves TSIG.</li>
+            <li><strong>Resolución Cifrada (DoT):</strong> El ISP no puede espiar el tráfico en el puerto 853.</li>
+            <li><strong>Filtrado RPZ:</strong> Bloqueo de sitios de apuestas y redirección de phishing escolar.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 3: Jerarquía DNS y dig +trace -->
+    <div class="slide">
+      <h2>🌍 Jerarquía DNS y Resolución Iterativa</h2>
+      <p>El estándar DNS resuelve nombres mediante delegaciones sucesivas de arriba hacia abajo (demostrado con <code>dig +trace</code>):</p>
+      <div class="grid-3">
+        <div class="card">
+          <h4>1. Zona Raíz [ . ]</h4>
+          <p style="font-size: 0.9rem;">13 clústeres de servidores mundiales (a.root-servers.net hasta m.root-servers.net). Responden con referencias al TLD correspondiente.</p>
+          <pre>h.root-servers.net -> 32 ms</pre>
+        </div>
+        <div class="card">
+          <h4>2. Servidores TLD [ .bo ]</h4>
+          <p style="font-size: 0.9rem;">Administran el registro de primer nivel de cada país (operado por ADSIB/NIC Bolivia). Delegan hacia los servidores de la institución.</p>
+          <pre>ns.nic.bo -> 64 ms</pre>
+        </div>
+        <div class="card">
+          <h4>3. Autoritativos [ horizonte ]</h4>
+          <p style="font-size: 0.9rem;">Custodian la verdad oficial de la zona escolar (ns1 y ns2). Entregan la IP autoritativa del host web final.</p>
+          <pre>ns1.horizonte.internal -> 0 ms</pre>
+        </div>
+      </div>
+      <p style="margin-top: 1rem; color: #e2e8f0; font-size: 0.95rem;">
+        🔍 <strong>Diferencia Crítica:</strong> Un <em>autoritativo</em> (BIND9) sabe la verdad de su propia zona; un <em>recursor</em> (Unbound) viaja por todo internet para responder a las PCs cliente.
+      </p>
+    </div>
+
+    <!-- Slide 4: Diseño de la Zona horizonte.internal -->
+    <div class="slide">
+      <h2>📋 Diseño de Registros en la Zona Autoritativa</h2>
+      <p>Configuración completa de registros de recursos (RR) cumpliendo con el Criterio 1 de evaluación:</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Tipo</th>
+            <th>Nombre</th>
+            <th>Valor / Destino</th>
+            <th>Propósito Institucional</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>SOA</code></td>
+            <td>@</td>
+            <td>ns1 ... ti.horizonte.internal. (2026100701)</td>
+            <td>Inicio de autoridad y sincronización</td>
+          </tr>
+          <tr>
+            <td><code>NS</code></td>
+            <td>@</td>
+            <td>ns1 (10.10.10.2) y ns2 (10.10.10.3)</td>
+            <td>Redundancia dual obligatoria</td>
+          </tr>
+          <tr>
+            <td><code>A</code></td>
+            <td>www</td>
+            <td>10.10.10.20</td>
+            <td>Dirección IPv4 del portal web Nginx</td>
+          </tr>
+          <tr>
+            <td><code>CNAME</code></td>
+            <td>portal</td>
+            <td>www.horizonte.internal.</td>
+            <td>Alias amigable sin duplicar IPs</td>
+          </tr>
+          <tr>
+            <td><code>MX</code></td>
+            <td>@</td>
+            <td>10 mail.horizonte.internal.</td>
+            <td>Ruta oficial de correo electrónico institucional</td>
+          </tr>
+          <tr>
+            <td><code>TXT</code></td>
+            <td>@</td>
+            <td>"v=spf1 mx -all"</td>
+            <td>Política SPF estricta: bloquea suplantadores</td>
+          </tr>
+          <tr>
+            <td><code>CAA</code></td>
+            <td>@</td>
+            <td>0 issue "horizonte.internal"</td>
+            <td>Restringe emisión de certificados TLS</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Slide 5: Justificación de TTL y SOA Serial -->
+    <div class="slide">
+      <h2>⏱️ Justificación Técnica: Temporizadores y Serial SOA</h2>
+      <p>Los parámetros temporales del SOA determinan la resiliencia y el comportamiento del caché de la escuela:</p>
+      <div class="grid-2">
+        <div class="card">
+          <h4>🔢 Formato del Serial: AAAAMMDDnn</h4>
+          <p>Se configuró <code>2026100701</code>. Garantiza monotonicidad matemática estricta. Si se olvida subir el serial, el secundario rechaza actualizarse aunque reciba NOTIFY.</p>
+          <hr style="border-color: var(--border); margin: 0.75rem 0;">
+          <h4>⚡ TTL por Defecto: 3600s (1 Hora)</h4>
+          <p>Permite un equilibrio óptimo: descongestiona la red con caché y asegura que cualquier contingencia de IPs se propague en menos de 60 minutos.</p>
+        </div>
+        <div class="card">
+          <h4>🛡️ Temporizadores de Resiliencia</h4>
+          <ul>
+            <li><strong>Refresh (3600s):</strong> ns2 comprueba si hay cambios en ns1 cada hora.</li>
+            <li><strong>Retry (600s):</strong> Reintento cada 10 minutos si ns1 no responde.</li>
+            <li><strong>Expire (14 días):</strong> Si ns1 muere, ns2 sigue atendiendo 2 semanas completas antes de apagarse.</li>
+            <li><strong>Negative TTL (300s):</strong> Evita que dominios inexistentes queden bloqueados en caché más de 5 min.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 6: BIND9 Primario y Zona Inversa -->
+    <div class="slide">
+      <h2>⚙️ Configuración del Primario (ns1) y Zona Inversa</h2>
+      <p>Endurecimiento perimetral en <code>named.conf.options</code> y zonas inversas canónicas:</p>
+      <div class="grid-2">
+        <div>
+          <h3>Seguridad en ns1 (named.conf.options)</h3>
+          <pre>options {
+    directory "/var/cache/bind";
+    recursion no;            // ¡Sin amplificación DDoS!
+    allow-query { any; };
+    allow-transfer { none; };// Cero fugas de zona
+    version "no disponible"; // Oculta versión
+};</pre>
+        </div>
+        <div>
+          <h3>Zona Inversa (db.10.10.10)</h3>
+          <pre>; Regla de oro: FQDN con punto final
+20  IN  PTR www.horizonte.internal.
+25  IN  PTR mail.horizonte.internal.
+; Sin punto final, BIND concatenaría:
+; mail.horizonte.internal.10.10.10.in-addr.arpa.</pre>
+        </div>
+      </div>
+      <p style="font-size: 0.95rem; color: var(--primary);">
+        ✅ <strong>Validación:</strong> Ambos archivos validados con <code>named-checkconf</code> y <code>named-checkzone</code> con estado <strong>OK</strong>.
+      </p>
+    </div>
+
+    <!-- Slide 7: Servidor Secundario y TSIG -->
+    <div class="slide">
+      <h2>🔐 Servidor Secundario (ns2) y Firma TSIG (RFC 2845)</h2>
+      <p>La transferencia de zona completa (AXFR) está blindada criptográficamente con clave simétrica:</p>
+      <div class="grid-2">
+        <div class="card">
+          <h4>🛡️ ¿Por qué TSIG y no control por IP?</h4>
+          <ul>
+            <li>La restricción por IP es vulnerable a <em>IP Spoofing</em> en capa 2.</li>
+            <li><strong>TSIG usa HMAC-SHA256:</strong> Firma el paquete completo con un secreto compartido y marca de tiempo (timestamp).</li>
+            <li>Imposible de falsificar o reutilizar en ataques de repetición.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>⚡ Demostración de Seguridad</h4>
+          <pre># 1. Consulta SIN clave TSIG:
+$ dig @10.10.10.2 horizonte.internal AXFR
+; Transfer failed.  [RECHAZADO]
+
+# 2. Consulta CON clave TSIG:
+$ dig -k transferencia.key @10.10.10.2 AXFR
+transferencia-horizonte. TSIG NOERROR
+XFR size: 17 records [EXITOSO]</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 8: NOTIFY y Sincronización en ns2 -->
+    <div class="slide">
+      <h2>⚡ Sincronización Real con NOTIFY (Logs de ns2)</h2>
+      <p>En cuanto se incrementa el serial en <code>ns1</code>, se dispara una notificación NOTIFY que actualiza a <code>ns2</code> en milisegundos:</p>
+      <pre>ns2 named[142]: client 10.10.10.2#55371: received notify for zone 'horizonte.internal'
+ns2 named[142]: zone horizonte.internal/IN: notify from 10.10.10.2#55371: serial 2026100702
+ns2 named[142]: zone horizonte.internal/IN: Transfer started.
+ns2 named[142]: transfer of 'horizonte.internal/IN' from 10.10.10.2#53: connected using TSIG transferencia-horizonte
+ns2 named[142]: transfer of 'horizonte.internal/IN' from 10.10.10.2#53: Transfer status: success
+ns2 named[142]: transfer completed: 1 messages, 18 records, 567 bytes, 0.001 secs (serial 2026100702)</pre>
+      <p style="color: var(--success); font-weight: 600;">
+        ⏱️ Tiempo de replicación comprobado: ¡0.001 segundos en transferir la zona completa!
+      </p>
+    </div>
+
+    <!-- Slide 9: Resolutor Unbound, DoT y RPZ -->
+    <div class="slide">
+      <h2>🛡️ Capa de Perímetro: Unbound, DoT y Filtrado RPZ</h2>
+      <p>El nodo resolutor (10.10.10.4) protege la navegación de toda la comunidad educativa:</p>
+      <div class="grid-3">
+        <div class="card">
+          <h4>🔒 DoT (Puerto 853)</h4>
+          <p style="font-size: 0.85rem;">Consultas externas hacia Cloudflare y Quad9 cifradas con TLS. Cero paquetes por el puerto 53 (demostrado con tcpdump).</p>
+        </div>
+        <div class="card">
+          <h4>🚫 Filtro RPZ</h4>
+          <p style="font-size: 0.85rem;">Bloqueo de sitios de apuestas (<code>NXDOMAIN</code>) y redirección de phishing (<code>horizonte-notas-login.com</code> a 10.10.10.20).</p>
+        </div>
+        <div class="card">
+          <h4>⚡ Aceleración Caché</h4>
+          <p style="font-size: 0.85rem;">Primera consulta en 1131 ms; segunda consulta en <strong>0 ms</strong> desde memoria RAM con validación DNSSEC activa.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 10: Script de Automatización Propio -->
+    <div class="slide">
+      <h2>🤖 Automatización Propia: verificar_autonomia_dns.sh</h2>
+      <p>Desarrollamos una herramienta de auditoría automatizada en Bash para satisfacer el Criterio 2 al 100%:</p>
+      <pre>==================================================================
+   AUDITORÍA AUTOMATIZADA DE INFRAESTRUCTURA DNS - ACTIVIDAD 2
+   Organización: U.E. Horizonte | Dominio: horizonte.internal
+   Estudiante: Charles Yourdan Conde Ugarteche & Grupo
+==================================================================
+  [OK] Registro A (raíz): horizonte.internal -> 10.10.10.20
+  [OK] Registro A (web): www.horizonte.internal -> 10.10.10.20
+  [OK] Registro CNAME (alias): portal.horizonte.internal -> www.horizonte.internal.
+  [OK] Registro MX (correo): horizonte.internal -> 10 mail.horizonte.internal.
+  [OK] Registro TXT (política SPF estricta): v=spf1 mx -all
+  [OK] Registro CAA (autoridad certificadora): issue "horizonte.internal"
+  [OK] Registro Inverso PTR: 10.10.10.20 -> www.horizonte.internal.
+  [OK] Consistencia de Serial SOA: ns1=2026100701 vs ns2=2026100701
+  [OK] Transferencia SIN clave rechazada | CON clave TSIG exitosa
+  [OK] ns1 no hace recursión (REFUSED a google.com)
+==================================================================
+   RESULTADO FINAL: 18 de 18 PRUEBAS SUPERADAS CON ÉXITO (100%)
+==================================================================</pre>
+    </div>
+
+    <!-- Slide 11: Cuadro Comparativo -->
+    <div class="slide">
+      <h2>📊 Comparativa: BIND9 (Linux) vs Windows Server DNS</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Criterio</th>
+            <th>BIND9 / Unbound en Linux</th>
+            <th>Windows Server DNS (Active Directory)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Almacenamiento</strong></td>
+            <td>Archivos de texto estándar (<code>/var/lib/bind</code>)</td>
+            <td>Integrado en la base de datos de AD (NTDS.DIT)</td>
+          </tr>
+          <tr>
+            <td><strong>Replicación</strong></td>
+            <td>NOTIFY + AXFR/IXFR firmados con <strong>TSIG</strong></td>
+            <td>Replicación multimaster por RPC / DRA</td>
+          </tr>
+          <tr>
+            <td><strong>Filtrado</strong></td>
+            <td>Response Policy Zones (<strong>RPZ</strong> estándar RFC)</td>
+            <td>DNS Policies de PowerShell / GPO</td>
+          </tr>
+          <tr>
+            <td><strong>Cifrado DoT</strong></td>
+            <td>Nativo con Unbound en puerto 853</td>
+            <td>Soporte DoH a partir de Windows Server 2022</td>
+          </tr>
+          <tr>
+            <td><strong>Costo</strong></td>
+            <td><strong class="highlight">$0 USD (Open Source sin licencias)</strong></td>
+            <td>Costo por licencia de Windows Server + CALs</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Slide 12: Conclusiones y Defensa -->
+    <div class="slide">
+      <div style="text-align: center; padding: 2rem 0;">
+        <span class="badge" style="margin-bottom: 1rem; display: inline-block;">Conclusiones y Defensa</span>
+        <h2>Infraestructura DNS 100% Operativa y Segura</h2>
+        <p style="max-width: 800px; margin: 1rem auto 2rem auto; font-size: 1.15rem;">
+          Se logró una solución robusta, sin punto único de fallo, blindada contra ataques DDoS y de transferencia no autorizada, con privacidad cifrada y validación automatizada de 18 pruebas.
+        </p>
+        <div class="card" style="display: inline-block; padding: 1.5rem 3rem; border-color: var(--primary);">
+          <h3 style="color: var(--primary); margin: 0 0 0.5rem 0;">🚀 Enlace Oficial de GitHub</h3>
+          <p style="margin: 0; font-family: 'JetBrains Mono', monospace; color: #fff;">
+            github.com/Grupo-Kali-Linuxxxx/DNS-moderno-con-BIND9
+          </p>
+        </div>
+        <p style="margin-top: 2rem; color: var(--text-muted); font-size: 1.1rem;">
+          ¡Muchas gracias por su atención! Estamos listos para la sesión de preguntas y defensa.
+        </p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Barra de Controles Inferior -->
+  <footer>
+    <button class="btn-nav" id="prevBtn" onclick="prevSlide()">◀ Anterior</button>
+    <div class="progress-bar-container">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <button class="btn-nav" id="nextBtn" onclick="nextSlide()">Siguiente ▶</button>
+    <button class="btn-fullscreen" onclick="toggleFullScreen()" title="Pantalla Completa (F)">⛶</button>
+  </footer>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    const counter = document.getElementById('counter');
+    const progressBar = document.getElementById('progressBar');
+    let currentSlide = 0;
+
+    function updateSlide() {
+      slides.forEach((slide, index) => {
+        slide.classList.toggle('active', index === currentSlide);
+      });
+      counter.textContent = `${currentSlide + 1} / ${slides.length}`;
+      progressBar.style.width = `${((currentSlide + 1) / slides.length) * 100}%`;
+    }
+
+    function nextSlide() {
+      if (currentSlide < slides.length - 1) {
+        currentSlide++;
+        updateSlide();
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 0) {
+        currentSlide--;
+        updateSlide();
+      }
+    }
+
+    function toggleFullScreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    }
+
+    // Navegación por teclado
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        prevSlide();
+      } else if (e.key.toLowerCase() === 'f') {
+        toggleFullScreen();
+      }
+    });
+
+    updateSlide();
+  </script>
+</body>
+</html>
